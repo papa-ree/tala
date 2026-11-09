@@ -1,7 +1,23 @@
 {
     "name": "bale/tala",
     "description": "Autentikasi SSO Keycloak dan panel warga global untuk Bale",
+    "keywords": [
+        "bale",
+        "laravel",
+        "panel",
+        "sso",
+        "keycloak",
+        "tala"
+    ],
+    "homepage": "https://github.com/papa-ree/tala",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Ricky Romdhoni",
+            "email": "ricky.romdhoni@gmail.com",
+            "role": "Developer"
+        }
+    ],
     "require": {
         "php": "^8.2",
         "bale/umpak": "*",
