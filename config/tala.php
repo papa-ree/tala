@@ -1,6 +1,9 @@
 <?php
 
 return [
+    // Matikan seluruh login SSO + panel: route tidak didaftarkan.
+    'enabled' => env('TALA_ENABLED', true),
+
     'guard' => 'tala',
 
     // Halaman tujuan setelah login berhasil.

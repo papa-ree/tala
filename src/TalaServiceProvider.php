@@ -6,6 +6,7 @@ use Bale\Tala\Attributes\PanelPage;
 use Bale\Tala\Commands\InstallTala;
 use Bale\Umpak\Concerns\HasLivewireComponents;
 use Composer\InstalledVersions;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Livewire\Component as LivewireComponent;
@@ -47,6 +48,14 @@ class TalaServiceProvider extends ServiceProvider
         );
 
         $this->app->booted(function () {
+            if (! config('tala.enabled')) {
+                // Route ber-`auth:tala` mengarahkan tamu ke nama route `login`.
+                // Tanpa ini Laravel melempar RouteNotFoundException (500).
+                Route::middleware('web')->get('/login', fn () => redirect('/'))->name('login');
+
+                return;
+            }
+
             $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
         });
 
