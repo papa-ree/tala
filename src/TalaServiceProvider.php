@@ -51,7 +51,7 @@ class TalaServiceProvider extends ServiceProvider
             if (! config('tala.enabled')) {
                 // Route ber-`auth:tala` mengarahkan tamu ke nama route `login`.
                 // Tanpa ini Laravel melempar RouteNotFoundException (500).
-                Route::middleware('web')->get('/login', fn () => redirect('/'))->name('login');
+                Route::middleware('web')->get('/auth', fn () => redirect('/'))->name('login');
 
                 return;
             }

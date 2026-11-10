@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web'])->group(function () {
     // Middleware `auth` default mengarah ke route ini.
-    Route::get('/login', fn () => redirect()->route('tala.redirect'))->name('login');
+    Route::get('/auth', fn () => redirect()->route('tala.redirect'))->name('login');
 });
 
 // Dipanggil langsung oleh Keycloak (server-to-server). Tanpa middleware `web`:
@@ -18,8 +18,8 @@ Route::post('/logout/kisara/backchannel', BackchannelLogoutController::class)
     ->name('tala.backchannel');
 
 Route::middleware(['web', 'throttle:20,1'])->group(function () {
-    Route::get('/login/citizen/redirect', [KeycloakController::class, 'redirect'])->name('tala.redirect');
-    Route::get('/login/citizen/callback', [KeycloakController::class, 'callback'])->name('tala.callback');
+    Route::get('/auth/redirect', [KeycloakController::class, 'redirect'])->name('tala.redirect');
+    Route::get('/auth/callback', [KeycloakController::class, 'callback'])->name('tala.callback');
 });
 
 Route::middleware(['web', 'auth:tala', EnsureTalaSession::class])->prefix('panel')->name('tala.panel.')->group(function () {
