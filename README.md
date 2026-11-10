@@ -43,9 +43,9 @@ Kredensial Keycloak diisi di `config/services.php` milik aplikasi
 
 | Method | Path | Nama |
 |---|---|---|
-| GET | `/login` | `login` (redirect ke Keycloak) |
-| GET | `/login/keycloak/redirect` | `tala.redirect` |
-| GET | `/login/keycloak/callback` | `tala.callback` |
+| GET | `/login` | `login` (redirect ke SSO warga) |
+| GET | `/login/citizen/redirect` | `tala.redirect` |
+| GET | `/login/citizen/callback` | `tala.callback` |
 | POST | `/logout/kisara/backchannel` | `tala.backchannel` |
 | GET | `/panel` | `tala.panel.overview` |
 | GET | `/panel/profil` | `tala.panel.profile` |

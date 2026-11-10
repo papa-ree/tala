@@ -25,13 +25,13 @@ class KeycloakController extends Controller
         } catch (\Throwable $e) {
             report($e);
 
-            return redirect('/')->with('error', __('Gagal masuk melalui Keycloak. Silakan coba lagi.'));
+            return redirect('/')->with('error', __('Gagal masuk melalui akun citizen. Silakan coba lagi.'));
         }
 
         $email = $remote->getEmail();
 
         if (! $email) {
-            return redirect('/')->with('error', __('Akun Keycloak tidak memiliki email.'));
+            return redirect('/')->with('error', __('Akun citizen tidak memiliki email.'));
         }
 
         $user = TalaUser::where('email', $email)->first();

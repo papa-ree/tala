@@ -18,8 +18,8 @@ Route::post('/logout/kisara/backchannel', BackchannelLogoutController::class)
     ->name('tala.backchannel');
 
 Route::middleware(['web', 'throttle:20,1'])->group(function () {
-    Route::get('/login/keycloak/redirect', [KeycloakController::class, 'redirect'])->name('tala.redirect');
-    Route::get('/login/keycloak/callback', [KeycloakController::class, 'callback'])->name('tala.callback');
+    Route::get('/login/citizen/redirect', [KeycloakController::class, 'redirect'])->name('tala.redirect');
+    Route::get('/login/citizen/callback', [KeycloakController::class, 'callback'])->name('tala.callback');
 });
 
 Route::middleware(['web', 'auth:tala', EnsureTalaSession::class])->prefix('panel')->name('tala.panel.')->group(function () {
