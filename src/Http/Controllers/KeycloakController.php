@@ -68,18 +68,30 @@ class KeycloakController extends Controller
 
     public function logout(Request $request)
     {
-        // Akhiri sesi SSO Keycloak juga, lalu kembali ke aplikasi.
-        $logoutUrl = Socialite::driver('keycloak')->getLogoutUrl(
-            url('/'),
-            config('services.keycloak.client_id'),
-            TokenStore::idToken(),
-        );
+        // Kegagalan Keycloak tidak boleh menahan logout lokal: tombol Keluar
+        // harus selalu mengeluarkan user dari aplikasi.
+        $logoutUrl = null;
+        $idToken = TokenStore::idToken();
+
+        if ($idToken) {
+            try {
+                $logoutUrl = Socialite::driver('keycloak')->getLogoutUrl(
+                    url('/'),
+                    config('services.keycloak.client_id'),
+                    $idToken,
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
 
         Auth::guard('tala')->logout();
         TokenStore::clear();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->away($logoutUrl);
+        // Tanpa id_token Keycloak hanya menampilkan halaman konfirmasi, jadi
+        // langsung kembali ke beranda.
+        return $logoutUrl ? redirect()->away($logoutUrl) : redirect('/');
     }
 }

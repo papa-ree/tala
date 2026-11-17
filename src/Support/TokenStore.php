@@ -111,6 +111,7 @@ final class TokenStore
             'access' => $body['access_token'],
             'refresh' => $body['refresh_token'] ?? $refresh,
             'id_token' => $body['id_token'] ?? session(self::KEY.'.id_token'),
+            'sid' => session(self::KEY.'.sid'),
             'expires_at' => now()->addSeconds((int) ($body['expires_in'] ?? 300))->getTimestamp(),
         ]]);
 

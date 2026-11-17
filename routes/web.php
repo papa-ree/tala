@@ -36,7 +36,8 @@ Route::middleware(['web', 'auth:tala', EnsureTalaSession::class])->prefix('panel
     }
 });
 
-// Logout tetap boleh walau sesi SSO sudah lewat: middleware sesi tidak dipasang.
-Route::middleware(['web', 'auth:tala'])->prefix('panel')->name('tala.panel.')->group(function () {
+// Logout tetap boleh walau sesi SSO sudah lewat: tanpa `auth` dan tanpa
+// middleware sesi, supaya POST dari tab lama tetap keluar dengan bersih.
+Route::middleware(['web'])->prefix('panel')->name('tala.panel.')->group(function () {
     Route::post('/logout', [KeycloakController::class, 'logout'])->name('logout');
 });
