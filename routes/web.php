@@ -14,8 +14,11 @@ Route::middleware(['web'])->group(function () {
 
 // Dipanggil langsung oleh Keycloak (server-to-server). Tanpa middleware `web`:
 // tidak ada session/CSRF, autentikasinya tanda tangan `logout_token`.
-Route::post('/logout/kisara/backchannel', BackchannelLogoutController::class)
+// Path mengikuti URL yang didaftarkan di client Keycloak; path lama tetap
+// dilayani agar client yang belum diperbarui tidak 404.
+Route::post('/logout/auth/backchannel', BackchannelLogoutController::class)
     ->name('tala.backchannel');
+Route::post('/logout/kisara/backchannel', BackchannelLogoutController::class);
 
 Route::middleware(['web', 'throttle:20,1'])->group(function () {
     Route::get('/auth/redirect', [KeycloakController::class, 'redirect'])->name('tala.redirect');

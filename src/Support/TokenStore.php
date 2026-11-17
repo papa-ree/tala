@@ -2,6 +2,7 @@
 
 namespace Bale\Tala\Support;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 
@@ -16,15 +17,34 @@ final class TokenStore
     public static function put(SocialiteUser $user): void
     {
         $expiresIn = property_exists($user, 'expiresIn') ? $user->expiresIn : null;
+        $idToken = property_exists($user, 'accessTokenResponseBody')
+            ? ($user->accessTokenResponseBody['id_token'] ?? null)
+            : null;
+        $sid = self::sidFromIdToken($idToken);
 
         session([self::KEY => [
             'access' => $user->token ?? null,
             'refresh' => $user->refreshToken ?? null,
-            'id_token' => property_exists($user, 'accessTokenResponseBody')
-                ? ($user->accessTokenResponseBody['id_token'] ?? null)
-                : null,
+            'id_token' => $idToken,
+            'sid' => $sid,
             'expires_at' => $expiresIn ? now()->addSeconds((int) $expiresIn)->getTimestamp() : null,
         ]]);
+
+        // Backchannel logout Keycloak hanya menyebut `sid`, bukan sesi Laravel.
+        // Petakan supaya logout satu perangkat tidak menghapus sesi perangkat lain.
+        if ($sid !== null) {
+            Cache::put(self::sidKey($sid), session()->getId(), now()->addMinutes((int) config('session.lifetime', 120)));
+        }
+    }
+
+    /**
+     * Sesi Laravel milik `sid` Keycloak yang di-logout (sekali pakai).
+     */
+    public static function pullSessionId(string $sid): ?string
+    {
+        $sessionId = Cache::pull(self::sidKey($sid));
+
+        return is_string($sessionId) ? $sessionId : null;
     }
 
     public static function accessToken(): ?string
@@ -99,6 +119,12 @@ final class TokenStore
 
     public static function clear(): void
     {
+        $sid = session(self::KEY.'.sid');
+
+        if (is_string($sid) && $sid !== '') {
+            Cache::forget(self::sidKey($sid));
+        }
+
         session()->forget(self::KEY);
     }
 
@@ -138,5 +164,31 @@ final class TokenStore
         return rtrim((string) config('services.keycloak.base_url'), '/')
             .'/realms/'.config('services.keycloak.realms')
             .'/protocol/openid-connect/token';
+    }
+
+    private static function sidKey(string $sid): string
+    {
+        return 'tala:sid:'.$sid;
+    }
+
+    /**
+     * Klaim `sid` (sesi SSO Keycloak) ada di payload id_token, bukan userinfo.
+     */
+    private static function sidFromIdToken(?string $idToken): ?string
+    {
+        if (! is_string($idToken) || $idToken === '') {
+            return null;
+        }
+
+        $parts = explode('.', $idToken);
+
+        if (count($parts) < 2) {
+            return null;
+        }
+
+        $json = base64_decode(strtr($parts[1], '-_', '+/'), false);
+        $claims = $json === false ? null : json_decode($json, true);
+
+        return is_array($claims) && ! empty($claims['sid']) ? (string) $claims['sid'] : null;
     }
 }

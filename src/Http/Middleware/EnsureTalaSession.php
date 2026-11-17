@@ -24,8 +24,11 @@ class EnsureTalaSession
     public function handle(Request $request, Closure $next): Response
     {
         $token = TokenStore::accessToken();
+        $needsRefresh = TokenStore::expiresAt() === null || TokenStore::expired();
 
-        if ($token === null || TokenStore::refresh() === false) {
+        // Refresh hanya saat access token habis. Menukar refresh token di
+        // setiap navigasi membuat dua perangkat saling mencabut sesi Keycloak.
+        if ($token === null || ($needsRefresh && TokenStore::refresh() === false)) {
             Auth::guard('tala')->logout();
             TokenStore::clear();
             $request->session()->invalidate();

@@ -3,9 +3,11 @@
 namespace Bale\Tala\Http\Controllers;
 
 use Bale\Tala\Support\BackchannelToken;
+use Bale\Tala\Support\TokenStore;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use stdClass;
 use Throwable;
 
 /**
@@ -23,28 +25,39 @@ class BackchannelLogoutController extends Controller
             return response('invalid logout_token', 400);
         }
 
-        $this->revoke((string) $claims->sub);
+        $this->revoke($claims);
 
         return response('', 200);
     }
 
-    private function revoke(string $subject): void
+    private function revoke(stdClass $claims): void
     {
-        // `users.username` diisi `sub` Keycloak saat login pertama, jadi tala
-        // tidak perlu membaca tabel milik package lain.
-        $uuid = DB::table('users')->where('username', $subject)->value('uuid');
+        // Keycloak mengakhiri satu sesi browser; `sid` menunjuk sesi itu saja.
+        // Menghapus semua sesi user membuat login di perangkat lain ikut
+        // terlempar ke halaman depan.
+        $sid = (string) ($claims->sid ?? '');
 
-        if (! $uuid) {
+        if ($sid !== '') {
+            $sessionId = TokenStore::pullSessionId($sid);
+
+            if ($sessionId !== null) {
+                DB::table(config('session.table', 'sessions'))->where('id', $sessionId)->delete();
+            }
+
             return;
         }
 
-        $userId = DB::table('users')->where('uuid', $uuid)->value('id');
+        // Tanpa `sid` artinya seluruh sesi user berakhir (spesifikasi).
+        // `users.username` diisi `sub` Keycloak saat login pertama.
+        $user = DB::table('users')->where('username', (string) $claims->sub)->first(['id', 'uuid']);
 
-        if ($userId) {
-            DB::table(config('session.table', 'sessions'))->where('user_id', $userId)->delete();
+        if (! $user) {
+            return;
         }
 
+        DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
+
         // Tanpa ini, cookie remember-me akan menghidupkan sesi tanpa token OIDC.
-        DB::table('users')->where('uuid', $uuid)->update(['remember_token' => null]);
+        DB::table('users')->where('uuid', $user->uuid)->update(['remember_token' => null]);
     }
 }
