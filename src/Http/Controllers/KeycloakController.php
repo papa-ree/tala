@@ -91,7 +91,10 @@ class KeycloakController extends Controller
         $request->session()->regenerateToken();
 
         // Tanpa id_token Keycloak hanya menampilkan halaman konfirmasi, jadi
-        // langsung kembali ke beranda.
-        return $logoutUrl ? redirect()->away($logoutUrl) : redirect('/');
+        // langsung kembali ke beranda. CSP `form-action 'self'` memblokir
+        // redirect POST ke domain Keycloak, karena itu lewat halaman perantara.
+        return $logoutUrl
+            ? response()->view('tala::logout.redirect', ['url' => $logoutUrl])
+            : redirect('/');
     }
 }
