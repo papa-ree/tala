@@ -13,9 +13,20 @@ use Laravel\Socialite\Facades\Socialite;
 
 class KeycloakController extends Controller
 {
+    /** Penanda sesi: warga baru saja logout lokal. */
+    private const LOGGED_OUT = 'tala.just_logged_out';
+
     public function redirect()
     {
-        return Socialite::driver('keycloak')->redirect();
+        $driver = Socialite::driver('keycloak');
+
+        // Sesi SSO Keycloak bertahan setelah logout lokal. Paksa form login
+        // sekali agar warga tidak otomatis masuk kembali.
+        if (session()->get(self::LOGGED_OUT)) {
+            $driver->with(['prompt' => 'login']);
+        }
+
+        return $driver->redirect();
     }
 
     public function callback(Request $request)
@@ -53,6 +64,7 @@ class KeycloakController extends Controller
 
         Auth::guard('tala')->login($user, true);
         $request->session()->regenerate();
+        $request->session()->forget(self::LOGGED_OUT);
 
         TokenStore::put($remote);
 
@@ -68,33 +80,16 @@ class KeycloakController extends Controller
 
     public function logout(Request $request)
     {
-        // Kegagalan Keycloak tidak boleh menahan logout lokal: tombol Keluar
-        // harus selalu mengeluarkan user dari aplikasi.
-        $logoutUrl = null;
-        $idToken = TokenStore::idToken();
-
-        if ($idToken) {
-            try {
-                $logoutUrl = Socialite::driver('keycloak')->getLogoutUrl(
-                    url('/'),
-                    config('services.keycloak.client_id'),
-                    $idToken,
-                );
-            } catch (\Throwable $e) {
-                report($e);
-            }
-        }
-
         Auth::guard('tala')->logout();
         TokenStore::clear();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        // Tanpa id_token Keycloak hanya menampilkan halaman konfirmasi, jadi
-        // langsung kembali ke beranda. CSP `form-action 'self'` memblokir
-        // redirect POST ke domain Keycloak, karena itu lewat halaman perantara.
-        return $logoutUrl
-            ? response()->view('tala::logout.redirect', ['url' => $logoutUrl])
-            : redirect('/');
+        // Logout lokal saja: end_session Keycloak butuh post_logout_redirect_uri
+        // terdaftar di client, dan tanpanya Keycloak menolak redirect balik.
+        // shortcut: sesi SSO tetap hidup, nyalakan lagi setelah URI terdaftar.
+        $request->session()->put(self::LOGGED_OUT, true);
+
+        return redirect('/');
     }
 }

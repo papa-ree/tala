@@ -46,12 +46,34 @@ Kredensial Keycloak diisi di `config/services.php` milik aplikasi
 | GET | `/auth` | `login` (redirect ke SSO warga) |
 | GET | `/auth/redirect` | `tala.redirect` |
 | GET | `/auth/callback` | `tala.callback` |
-| POST | `/logout/kisara/backchannel` | `tala.backchannel` |
+| POST | `/logout/auth/backchannel` | `tala.backchannel` (`/logout/kisara/backchannel` tetap dilayani) |
 | GET | `/panel` | `tala.panel.overview` |
 | GET | `/panel/profil` | `tala.panel.profile` |
 | POST | `/panel/logout` | `tala.panel.logout` |
 
 Halaman milik package terdaftar muncul sebagai `/panel/{package}/{page}`.
+
+## Logout
+
+Tombol Keluar di panel hanya mengakhiri sesi aplikasi:
+`POST /panel/logout` → logout guard `tala` → `TokenStore::clear()` → session
+di-invalidate → redirect `/`.
+
+Sesi SSO Keycloak **tidak** diakhiri. `end_session` Keycloak menolak redirect
+balik bila `post_logout_redirect_uri` belum terdaftar di client (*Valid post
+logout redirect URIs*); hasilnya halaman error "URI pengalihan tidak valid".
+CSP server (`form-action 'self'`) juga memblokir redirect POST lintas domain.
+Karena itu logout SSO sengaja belum dipakai.
+
+Agar warga tidak otomatis masuk lagi lewat sesi SSO yang masih hidup, sesi
+aplikasi menyimpan penanda `tala.just_logged_out`; selama penanda ada,
+`/auth/redirect` mengirim `prompt=login` sehingga Keycloak menampilkan form
+login. Penanda dihapus setelah login berhasil.
+
+Untuk mengaktifkan logout SSO nanti (setelah admin SSO mendaftarkan URI balik):
+susun URL `end_session` dengan `id_token_hint` + `post_logout_redirect_uri`, dan
+kirim lewat halaman perantara (meta refresh) atau longgarkan `form-action`,
+karena redirect langsung dari POST akan diblokir CSP.
 
 ## Mendaftarkan Halaman Panel
 
